@@ -1,4 +1,3 @@
-using PvPArenas.Common.DataStructures;
 using PvPArenas.Common.Game.BossVoting;
 using PvPArenas.Common.Game.LoadoutSelector;
 using PvPArenas.Common.Game.Score;

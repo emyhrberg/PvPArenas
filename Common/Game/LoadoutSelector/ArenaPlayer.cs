@@ -1,4 +1,3 @@
-using PvPArenas.Common.DataStructures;
 using PvPArenas.Common.Game.TeamBalancing;
 using PvPFramework.Common.Scoreboard;
 using System;

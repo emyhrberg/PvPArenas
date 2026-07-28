@@ -1,4 +1,4 @@
-﻿namespace PvPArenas.Common.DataStructures;
+﻿namespace PvPArenas.Common.Game;
 
 internal enum ArenaKind : byte
 {

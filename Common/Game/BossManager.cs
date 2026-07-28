@@ -1,4 +1,3 @@
-using PvPArenas.Common.DataStructures;
 using PvPArenas.Common.Game.LoadoutSelector;
 using PvPFramework.Common.Combat.TeamBoss;
 using PvPFramework.Core.Configs.ConfigElements;

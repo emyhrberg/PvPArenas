@@ -1,4 +1,3 @@
-using PvPArenas.Common.DataStructures;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Terraria.ModLoader.Config;

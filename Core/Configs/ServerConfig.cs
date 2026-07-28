@@ -1,6 +1,6 @@
-using PvPArenas.Common.DataStructures.ConfigElements;
 using PvPArenas.Common.Game.LoadoutSelector;
 using PvPArenas.Core.Compat;
+using PvPArenas.Core.Configs.ConfigElements;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Terraria.ID;

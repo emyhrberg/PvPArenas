@@ -1,4 +1,4 @@
-using PvPArenas.Common.DataStructures.LoadoutItems;
+using PvPArenas.Core.Configs.ConfigElements.LoadoutItems;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

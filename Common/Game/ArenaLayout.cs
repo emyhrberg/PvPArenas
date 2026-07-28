@@ -1,7 +1,7 @@
 using System.IO;
 using Terraria.Enums;
 
-namespace PvPArenas.Common.DataStructures;
+namespace PvPArenas.Common.Game;
 
 internal sealed record ArenaLayout(Rectangle ArenaBounds, Point BlueSpawn, Point RedSpawn)
 {
