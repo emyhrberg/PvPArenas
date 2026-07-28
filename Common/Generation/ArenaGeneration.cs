@@ -1,4 +1,5 @@
-using PvPArenas.Common.DataStructures;
+using PvPArenas.Common.Game;
+using PvPArenas.Common.Game.LoadoutSelector;
 using System;
 using Terraria.ID;
 

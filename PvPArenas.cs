@@ -1,4 +1,6 @@
 using PvPArenas.Common.Game;
+using PvPArenas.Common.Game.BossVoting;
+using PvPArenas.Common.Game.LoadoutSelector;
 using PvPArenas.Core.Compat;
 using System;
 using System.IO;

@@ -1,4 +1,3 @@
-using PvPArenas.Common.DataStructures;
 using PvPArenas.Common.Game;
 using System;
 using Terraria.ID;

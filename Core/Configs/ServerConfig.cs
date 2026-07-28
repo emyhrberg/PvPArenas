@@ -1,5 +1,5 @@
-using PvPArenas.Common.DataStructures;
 using PvPArenas.Common.DataStructures.ConfigElements;
+using PvPArenas.Common.Game.LoadoutSelector;
 using PvPArenas.Core.Compat;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,7 +17,7 @@ internal sealed class ServerConfig : ModConfig
     [Header("BossFights")]
     [Expand(true)]
     [CustomModConfigItem(typeof(BossFightPresetListElement))]
-    public List<BossFightPreset> FightPresets = Common.DataStructures.FightPresets.CreateFightPresets();
+    public List<BossFightPreset> FightPresets = Common.Game.LoadoutSelector.FightPresets.CreateFightPresets();
 
     [Header("RoundTime")]
 

@@ -274,7 +274,7 @@ internal sealed class ArenaSpawnBoxMap : ModMapLayer
         float scale = Main.mapFullscreen
             ? context.MapScale *
                 context.DrawScale *
-                1.33f
+                0.25f
             : MinimapArenaLabelScale;
 
         if (scale <= 0f)
@@ -426,7 +426,7 @@ internal sealed class ArenaSpawnBoxMap : ModMapLayer
         float scale = Main.mapFullscreen
             ? context.MapScale *
                 context.DrawScale *
-                .6f
+                0.25f
             : MinimapSpawnLabelScale;
 
         if (scale <= 0f)
