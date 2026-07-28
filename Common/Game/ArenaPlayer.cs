@@ -118,19 +118,6 @@ internal sealed class ArenaPlayer : ModPlayer
         }
     }
 
-    public override void OnRespawn()
-    {
-        RoundManager manager = ModContent.GetInstance<RoundManager>();
-        if ((Team)Player.team is not (Team.Red or Team.Blue)
-            || manager.CurrentPhase is not (RoundManager.RoundPhase.FreezeCountdown or RoundManager.RoundPhase.Playing)
-            || manager.CurrentLayout == null || !manager.TryGetSelectedPreset(out BossFightPreset preset))
-            return;
-
-        ApplyLoadout(Player, preset);
-        SetArenaSpawn(manager.CurrentLayout.PlayerSpawn((Team)Player.team));
-        roundPrepared = true;
-    }
-
     internal static void Prepare(Player player, BossFightPreset preset, ArenaLayout layout)
     {
         if (player?.active != true || preset == null || layout == null)

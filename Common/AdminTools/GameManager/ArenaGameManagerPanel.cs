@@ -12,7 +12,7 @@ internal sealed class ArenaGameManagerPanel : UIDraggablePanel
     protected override float MaxResizeW => 520f;
     protected override float MaxResizeH => 400f;
 
-    public ArenaGameManagerPanel() : base(Language.GetTextValue("Mods.Arenas.Tools.ArenaGameManagerPanel.Title"))
+    public ArenaGameManagerPanel() : base(Language.GetTextValue("Mods.PvPArenas.Tools.ArenaGameManagerPanel.Title"))
     {
         Width.Set(420, 0);
         Height.Set(290, 0);
