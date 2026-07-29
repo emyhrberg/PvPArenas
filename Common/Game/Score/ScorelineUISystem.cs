@@ -1,4 +1,3 @@
-using PvPArenas.Core.Compat;
 using PvPArenas.Core.Configs;
 using PvPFramework.Common.Combat.TeamBoss;
 using System;
@@ -214,8 +213,8 @@ internal sealed class ScorelineUISystem : ModSystem
             Vector2 center = new(firstCenter + step * i, panel.Center.Y);
             Rectangle hitbox = new((int)center.X - HeadSize / 2, panel.Center.Y - HeadSize / 2,
                 HeadSize, HeadSize);
-            ErkySSCCompat.DrawUnfilteredPlayerHead(players[i], center - new Vector2(2f, 2f),
-                opacity, .6f * HeadSize / 26f, headColor * opacity);
+            Main.MapPlayerRenderer.DrawPlayerHead(Main.Camera, players[i],
+                center - new Vector2(2f, 2f), opacity, .6f * HeadSize / 26f, headColor * opacity);
 
             if (!hitbox.Contains(Main.MouseScreen.ToPoint()))
                 continue;
