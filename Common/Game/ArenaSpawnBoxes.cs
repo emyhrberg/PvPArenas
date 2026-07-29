@@ -272,9 +272,7 @@ internal sealed class ArenaSpawnBoxMap : ModMapLayer
             FontAssets.DeathText.Value;
 
         float scale = Main.mapFullscreen
-            ? context.MapScale *
-                context.DrawScale *
-                0.25f
+            ? .25f
             : MinimapArenaLabelScale;
 
         if (scale <= 0f)
@@ -424,9 +422,7 @@ internal sealed class ArenaSpawnBoxMap : ModMapLayer
             FontAssets.DeathText.Value;
 
         float scale = Main.mapFullscreen
-            ? context.MapScale *
-                context.DrawScale *
-                0.25f
+            ? .25f
             : MinimapSpawnLabelScale;
 
         if (scale <= 0f)
