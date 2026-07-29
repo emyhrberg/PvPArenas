@@ -14,9 +14,7 @@ internal static class FightPresets
             ArenaKind = ArenaKind.WorldCenterSurface,
             ArenaWidthTiles = 200,
             ArenaHeightTiles = 100,
-            MaxHealth = 200,
-            MaxMana = 100,
-            Loadouts = CreatePreBossLoadouts()
+            Loadouts = WithStats(CreatePreBossLoadouts(), 200, 100)
         },
         new()
         {
@@ -24,9 +22,7 @@ internal static class FightPresets
             ArenaKind = ArenaKind.WorldCenterSurface,
             ArenaWidthTiles = 200,
             ArenaHeightTiles = 100,
-            MaxHealth = 240,
-            MaxMana = 100,
-            Loadouts = CreatePreBossLoadouts()
+            Loadouts = WithStats(CreatePreBossLoadouts(), 200, 100)
         },
         new()
         {
@@ -34,9 +30,7 @@ internal static class FightPresets
             ArenaKind = ArenaKind.UndergroundJungle,
             ArenaWidthTiles = 200,
             ArenaHeightTiles = 100,
-            MaxHealth = 400,
-            MaxMana = 180,
-            Loadouts = CreatePostMechLoadouts()
+            Loadouts = WithStats(CreatePostMechLoadouts(), 400, 180)
         },
         new()
         {
@@ -44,9 +38,7 @@ internal static class FightPresets
             ArenaKind = ArenaKind.JungleTemple,
             ArenaWidthTiles = 200,
             ArenaHeightTiles = 100,
-            MaxHealth = 500,
-            MaxMana = 200,
-            Loadouts = CreatePostPlanteraLoadouts()
+            Loadouts = WithStats(CreatePostPlanteraLoadouts(), 500, 200)
         },
         new()
         {
@@ -55,11 +47,24 @@ internal static class FightPresets
             ArenaKind = ArenaKind.WorldCenterSurface,
             ArenaWidthTiles = 200,
             ArenaHeightTiles = 100,
-            MaxHealth = 500,
-            MaxMana = 200,
-            Loadouts = CreateSandboxLoadouts()
+            Loadouts = WithStats(CreateSandboxLoadouts(), 500, 200)
         }
     ];
+
+    // Life/mana are per-loadout (not per-boss); stamp a tier's value onto every option.
+    private static List<ArenaLoadoutOption> WithStats(
+        List<ArenaLoadoutOption> options, int maxHealth, int maxMana)
+    {
+        foreach (ArenaLoadoutOption option in options)
+        {
+            if (option?.Loadout == null)
+                continue;
+            option.Loadout.MaxHealth = maxHealth;
+            option.Loadout.MaxMana = maxMana;
+        }
+
+        return options;
+    }
 
     // Sandbox mode: four empty loadouts the player fills in themselves via the item picker.
     private static List<ArenaLoadoutOption> CreateSandboxLoadouts() =>
@@ -128,7 +133,7 @@ internal static class FightPresets
         {
             GrapplingHook = Def(ItemID.EmeraldHook)
         },
-        Inventory =
+        Inventory = WithBaseRow(
         [
             Item(ItemID.FieryGreatsword),
             Item(ItemID.Valor),
@@ -136,9 +141,8 @@ internal static class FightPresets
             Item(ItemID.HellfireArrow, 9999),
             Item(ItemID.DarkLance),
             Item(ItemID.Sunfury),
-            Item(ItemID.Ale, 9999),
-            .. PreBossBase()
-        ]
+            Item(ItemID.Ale, 9999)
+        ], PreBossBase())
     };
 
     /// <summary>
@@ -166,7 +170,7 @@ internal static class FightPresets
         {
             GrapplingHook = Def(ItemID.EmeraldHook)
         },
-        Inventory =
+        Inventory = WithBaseRow(
         [
             Item(ItemID.SpaceGun),
             Item(ItemID.DemonScythe),
@@ -177,9 +181,8 @@ internal static class FightPresets
             Item(ItemID.AquaScepter),
             Item(ItemID.MagicMissile),
             Item(ItemID.ManaPotion, 9999),
-            Item(ItemID.CrystalBall),
-            .. PreBossBase()
-        ]
+            Item(ItemID.CrystalBall)
+        ], PreBossBase())
     };
 
     #endregion
@@ -296,7 +299,31 @@ internal static class FightPresets
         int classAccessory2,
         LoadoutItem[] classItems)
     {
-        Loadout loadout = new()
+        List<LoadoutItem> baseItems =
+        [
+            Item(ItemID.Binoculars),
+            Item(ItemID.Teacup, 9999),
+            Item(ItemID.IceRod),
+            Item(ItemID.ChlorophyteDrill),
+            Item(ItemID.HoneyBucket),
+            Item(ItemID.Bomb, 500),
+            Item(ItemID.GreaterHealingPotion, 9999),
+            Item(ItemID.AegisFruit),
+            Item(ItemID.Campfire, 5),
+            Item(ItemID.HeartLantern, 5),
+            Item(ItemID.Wood, 500),
+            Item(ItemID.Bed, 5),
+            Item(ItemID.PortalGun),
+            Item(ItemID.CharmofMyths),
+            Item(ItemID.StarVeil),
+            Item(ItemID.VolatileGelatin),
+            Item(ItemID.EncumberingStone)
+        ];
+
+        if (ItemID.Search.TryGetId("VitalCrystal", out int vitalCrystal))
+            baseItems.Add(Item(vitalCrystal));
+
+        return new Loadout
         {
             Armor = new()
             {
@@ -317,34 +344,8 @@ internal static class FightPresets
                 GrapplingHook = Def(ItemID.DualHook),
                 Mount = Def(ItemID.SlimySaddle)
             },
-            Inventory =
-            [
-                .. classItems,
-
-                Item(ItemID.Binoculars),
-                Item(ItemID.Teacup, 9999),
-                Item(ItemID.IceRod),
-                Item(ItemID.ChlorophyteDrill),
-                Item(ItemID.HoneyBucket),
-                Item(ItemID.Bomb, 500),
-                Item(ItemID.GreaterHealingPotion, 9999),
-                Item(ItemID.AegisFruit),
-                Item(ItemID.Campfire, 5),
-                Item(ItemID.HeartLantern, 5),
-                Item(ItemID.Wood, 500),
-                Item(ItemID.Bed, 5),
-                Item(ItemID.PortalGun),
-                Item(ItemID.CharmofMyths),
-                Item(ItemID.StarVeil),
-                Item(ItemID.VolatileGelatin),
-                Item(ItemID.EncumberingStone)
-            ]
+            Inventory = WithBaseRow(classItems, [.. baseItems])
         };
-
-        if (ItemID.Search.TryGetId("VitalCrystal", out int vitalCrystal))
-            loadout.Inventory.Add(Item(vitalCrystal));
-
-        return loadout;
     }
 
     #endregion
@@ -493,6 +494,17 @@ internal static class FightPresets
         Item = Def(type),
         Stack = stack
     };
+
+    // Puts class/combat items on the hotbar (first inventory row) and the shared
+    // base/utility items from the second row onward, padding empty hotbar slots.
+    private static List<LoadoutItem> WithBaseRow(LoadoutItem[] hotbar, LoadoutItem[] baseItems)
+    {
+        List<LoadoutItem> inventory = [.. hotbar];
+        while (inventory.Count < 10)
+            inventory.Add(Item(ItemID.None));
+        inventory.AddRange(baseItems);
+        return inventory;
+    }
 
     #endregion
 }

@@ -223,5 +223,13 @@ Mods: {
 				}
 			}
 		}
+		Tools:
+		{
+			ArenaGameManagerPanel:
+			{
+				Title: Arena Game Manager
+				RoundControls: Round Controls
+			}
+		}
 	}
 }

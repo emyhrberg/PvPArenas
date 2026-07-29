@@ -495,8 +495,8 @@ internal sealed class ArenaPlayer : ModPlayer
         player.dead = false;
         player.ghost = false;
         player.respawnTimer = 0;
-        player.statLifeMax = player.statLifeMax2 = Math.Max(1, preset.MaxHealth);
-        player.statManaMax = player.statManaMax2 = Math.Max(0, preset.MaxMana);
+        player.statLifeMax = player.statLifeMax2 = Math.Max(1, loadout.MaxHealth);
+        player.statManaMax = player.statManaMax2 = Math.Max(0, loadout.MaxMana);
         player.statLife = player.statLifeMax;
         player.statMana = player.statManaMax;
 

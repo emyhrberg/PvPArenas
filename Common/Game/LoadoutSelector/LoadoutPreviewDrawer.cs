@@ -97,6 +97,8 @@ internal static class LoadoutPreviewDrawer
 
     private static int cachedPresetIndex = -1;
     private static int cachedDisplayLoadoutIndex = -1;
+    private static int cachedMaxHealth = 100;
+    private static int cachedMaxMana = 20;
     private static bool cacheValid;
 
     private static int localLoadoutIndex;
@@ -346,6 +348,8 @@ internal static class LoadoutPreviewDrawer
         DrawPreviewBox(
             previewBox,
             mouse);
+
+        DrawLoadoutStats(previewBox, scale, S);
 
         int inventoryOriginX =
             previewBox.Right
@@ -1103,6 +1107,9 @@ internal static class LoadoutPreviewDrawer
                     };
         }
 
+        cachedMaxHealth = loadout.MaxHealth;
+        cachedMaxMana = loadout.MaxMana;
+
         previewPlayer =
             BuildPreviewPlayer(loadout);
     }
@@ -1588,6 +1595,79 @@ internal static class LoadoutPreviewDrawer
         }
 
         HandleEditClick(cell, entry, mouse);
+    }
+
+    // Max life / max mana of the shown loadout, drawn as a small icon + number strip
+    // across the bottom of the preview portrait.
+    private static void DrawLoadoutStats(
+        Rectangle previewBox,
+        float scale,
+        Func<float, int> S)
+    {
+        int height = S(20);
+        Rectangle strip = new(
+            previewBox.X + S(3),
+            previewBox.Bottom - height - S(3),
+            previewBox.Width - S(6),
+            height);
+
+        Main.spriteBatch.Draw(
+            TextureAssets.MagicPixel.Value,
+            strip,
+            new Color(8, 12, 28) * (.72f * alpha));
+
+        int half = strip.Width / 2;
+        DrawStat(
+            TextureAssets.Heart.Value,
+            cachedMaxHealth,
+            new Rectangle(strip.X, strip.Y, half, strip.Height),
+            scale,
+            S);
+
+        DrawStat(
+            TextureAssets.Mana.Value,
+            cachedMaxMana,
+            new Rectangle(strip.X + half, strip.Y, strip.Width - half, strip.Height),
+            scale,
+            S);
+    }
+
+    private static void DrawStat(
+        Texture2D icon,
+        int value,
+        Rectangle area,
+        float scale,
+        Func<float, int> S)
+    {
+        float iconScale = (area.Height - S(4)) / (float)icon.Height;
+        float iconWidth = icon.Width * iconScale;
+        string text = value.ToString();
+        float textScale = .7f * scale;
+        Vector2 textSize =
+            FontAssets.MouseText.Value.MeasureString(text) * textScale;
+        float gap = S(3);
+        float startX =
+            area.Center.X - (iconWidth + gap + textSize.X) / 2f;
+
+        Main.spriteBatch.Draw(
+            icon,
+            new Vector2(startX + iconWidth / 2f, area.Center.Y),
+            null,
+            Color.White * alpha,
+            0f,
+            icon.Size() / 2f,
+            iconScale,
+            SpriteEffects.None,
+            0f);
+
+        Utils.DrawBorderString(
+            Main.spriteBatch,
+            text,
+            new Vector2(
+                startX + iconWidth + gap,
+                area.Center.Y - textSize.Y / 2f),
+            Color.White * alpha,
+            textScale);
     }
 
     private static void DrawPanel(
