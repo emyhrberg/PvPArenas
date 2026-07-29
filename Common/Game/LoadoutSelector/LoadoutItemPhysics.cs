@@ -35,7 +35,7 @@ internal static class LoadoutItemPhysics
     private const float ShadowOffset = 2f;
     private const float ScrollStrength = .35f;
 
-    private const float WiggleAmplitude = .052f;
+    private const float WiggleAmplitude = .104f;
     private const float WiggleSpeed = .09f;
 
     private static readonly Dictionary<int, PhysicsState> SlotStates = [];

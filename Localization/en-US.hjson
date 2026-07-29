@@ -126,6 +126,16 @@ Mods: {
 					Label: Inventory
 					Tooltip: ""
 				}
+
+				MaxHealth: {
+					Label: Max Health
+					Tooltip: ""
+				}
+
+				MaxMana: {
+					Label: Max Mana
+					Tooltip: ""
+				}
 			}
 
 			LoadoutArmor: {
@@ -223,10 +233,9 @@ Mods: {
 				}
 			}
 		}
-		Tools:
-		{
-			ArenaGameManagerPanel:
-			{
+
+		Tools: {
+			ArenaGameManagerPanel: {
 				Title: Arena Game Manager
 				RoundControls: Round Controls
 			}

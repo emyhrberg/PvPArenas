@@ -24,9 +24,9 @@ internal sealed class ServerConfig : ModConfig
     [DefaultValue(600), Range(1, 3600)]
     public int RoundDurationSeconds = 600;
 
-    [DefaultValue(10)]
+    [DefaultValue(20)]
     [Range(0, 300)]
-    public int FreezeCountdownSeconds = 10;
+    public int FreezeCountdownSeconds = 20;
 
     [DefaultValue(30)]
     [Range(5, 300)]
@@ -34,8 +34,8 @@ internal sealed class ServerConfig : ModConfig
 
     [Header("GemRewards")]
 
-    [DefaultValue(25), Range(0, 150)]
-    public int VictoryGemReward = 25;
+    [DefaultValue(10), Range(0, 150)]
+    public int VictoryGemReward = 10;
     #endregion
 
     #region Hooks

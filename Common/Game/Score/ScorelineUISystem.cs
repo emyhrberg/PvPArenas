@@ -6,7 +6,6 @@ using System.Linq;
 using Terraria.GameContent;
 using Terraria.Enums;
 using Terraria.UI;
-using PvPArenas.Common.Game.LoadoutSelector;
 using PvPArenas.Common.Game.BossVoting;
 
 namespace PvPArenas.Common.Game.Score;
@@ -36,7 +35,7 @@ internal sealed class ScorelineUISystem : ModSystem
         int index = layers.FindIndex(layer => layer.Name == "Vanilla: Mouse Text");
         if (index >= 0)
             layers.Insert(index, new LegacyGameInterfaceLayer(
-                "Arenas: Phase Scoreline", Draw, InterfaceScaleType.UI));
+                "Arenas: Scoreline Top HUD", Draw, InterfaceScaleType.UI));
     }
 
     private static bool Draw()
@@ -48,10 +47,7 @@ internal sealed class ScorelineUISystem : ModSystem
         if (manager.CurrentPhase == RoundManager.RoundPhase.VotingOrEndScreen)
             BossVoteDrawer.Draw(110);
         if (manager.CurrentPhase == RoundManager.RoundPhase.FreezeCountdown)
-        {
             DrawCenterCountdown(manager);
-            LoadoutPreviewDrawer.Draw(StatusHeight + 40);
-        }
 
         if (!ModContent.GetInstance<ClientConfig>().ShowTopScoreboard)
             return true;
