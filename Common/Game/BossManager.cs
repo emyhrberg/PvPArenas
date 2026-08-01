@@ -173,7 +173,7 @@ internal sealed class BossManager : ModSystem
             ? Math.Max(0, teamLife)
             : boss.lifeMax;
         uint appliedDamage = (uint)Math.Min(damage, remaining);
-        player.GetModPlayer<ArenaPlayer>().AddBossDamage(appliedDamage);
+        player.GetModPlayer<ArenaPlayer>().AddBossDamage(appliedDamage, itemType);
     }
 
     private bool TryGetBoss(out NPC boss)

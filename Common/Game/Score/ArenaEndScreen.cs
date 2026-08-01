@@ -13,7 +13,10 @@ internal static class ArenaEndScreen
 {
     internal static void Present(Team winningTeam, int winningPlayerId)
     {
-        EndScreenSummary summary = new();
+        // Doubles as the match token. Without it the end screen has no key to match late gem
+        // confirmations against and would sit on "Waiting for Tavernkeep confirmation..." forever.
+        string presentationKey = Guid.NewGuid().ToString("N");
+        EndScreenSummary summary = new() { PresentationKey = presentationKey };
         Team[] teams = Main.player.Where(player => player?.active == true).Select(player => (Team)player.team)
             .Where(team => team is Team.Red or Team.Blue)
             .Distinct()
@@ -39,21 +42,39 @@ internal static class ArenaEndScreen
             .ToDictionary(entry => entry.damage, entry => entry.rank);
 
         uint gemReward = (uint)Math.Max(0, ModContent.GetInstance<ServerConfig>().VictoryGemReward);
+        List<MatchReporter.ReportPlayer> reportPlayers = [];
         foreach (Player player in players)
         {
             ScoreboardEntry stats = ScoreboardService.GetPlayerStats(player);
-            long bossDamage = player.GetModPlayer<ArenaPlayer>().BossDamage;
+            ArenaPlayer arenaPlayer = player.GetModPlayer<ArenaPlayer>();
+            long bossDamage = arenaPlayer.BossDamage;
             string role = DamageTitle(bossDamage, damageRanks[bossDamage]);
             summary.Players.Add(new EndScreenPlayerStats(
                 stats.PlayerId, stats.Team, stats.Name, stats.Kills, stats.Deaths,
                 Clamp(stats.Damage), 0, 0, 0, 0, 0, 0, Clamp(bossDamage), 0, 0, 0,
                 role, $"{bossDamage} damage"));
 
-            if (winningTeam != Team.None && (Team)player.team == winningTeam && gemReward > 0)
-                summary.PlayerRewards[stats.PlayerId] = gemReward;
+            bool winner = winningTeam != Team.None && (Team)player.team == winningTeam;
+            uint reward = winner && gemReward > 0 ? gemReward : 0;
+            if (reward > 0)
+                summary.PlayerRewards[stats.PlayerId] = reward;
+
+            reportPlayers.Add(new MatchReporter.ReportPlayer(
+                player.whoAmI, stats.Team, stats.Name, stats.Kills, stats.Deaths,
+                stats.Damage, stats.DamageTaken, bossDamage, arenaPlayer.BossDamageByItem,
+                reward, winner));
         }
 
         EndScreenService.Present(summary);
+
+        RoundManager manager = ModContent.GetInstance<RoundManager>();
+        MatchReporter.PostCompletedMatch(
+            presentationKey,
+            manager.RoundStartUtc,
+            DateTime.UtcNow,
+            manager.SelectedBossType,
+            winningTeam,
+            reportPlayers);
     }
 
     private static string DamageTitle(long damage, int rank)

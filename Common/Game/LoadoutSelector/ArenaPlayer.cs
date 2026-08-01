@@ -17,7 +17,12 @@ internal sealed class ArenaPlayer : ModPlayer
 
     internal int SelectedLoadoutIndex;
 
+    private readonly Dictionary<int, uint> bossDamageByItem = [];
+
     internal long BossDamage { get; private set; }
+
+    /// <summary>Boss damage split by the item that dealt it, for the match report's item stats.</summary>
+    internal IReadOnlyDictionary<int, uint> BossDamageByItem => bossDamageByItem;
 
     public override void Load()
     {
@@ -320,8 +325,20 @@ internal sealed class ArenaPlayer : ModPlayer
         }
     }
 
-    internal void AddBossDamage(uint damage) =>
+    internal void AddBossDamage(uint damage, int itemType)
+    {
+        // A zero delta would create a zero-valued item stat, which Tavernkeep rejects.
+        if (damage == 0)
+            return;
+
         BossDamage = BossDamage > long.MaxValue - damage ? long.MaxValue : BossDamage + damage;
+
+        if (itemType <= ItemID.None)
+            return;
+
+        uint previous = bossDamageByItem.GetValueOrDefault(itemType);
+        bossDamageByItem[itemType] = previous > uint.MaxValue - damage ? uint.MaxValue : previous + damage;
+    }
 
     private void KeepInsideArena(ArenaLayout layout)
     {
@@ -347,7 +364,11 @@ internal sealed class ArenaPlayer : ModPlayer
             NetMessage.SendData(MessageID.PlayerControls, -1, -1, null, Player.whoAmI);
     }
 
-    private void ResetBossDamage() => BossDamage = 0;
+    private void ResetBossDamage()
+    {
+        BossDamage = 0;
+        bossDamageByItem.Clear();
+    }
 
     private void SetArenaSpawn(Point spawn)
     {

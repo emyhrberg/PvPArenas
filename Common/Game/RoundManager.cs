@@ -57,6 +57,9 @@ internal sealed class RoundManager : ModSystem
     private bool idleHeld;
     private int selectedPresetIndex = -1;
     private ArenaLayout currentLayout;
+
+    /// <summary>UTC time the current fight (Playing phase) began; used for match reporting.</summary>
+    internal System.DateTime RoundStartUtc { get; private set; } = System.DateTime.UtcNow;
     private Team pendingWinningTeam;
     private int pendingWinningPlayer = -1;
 
@@ -362,6 +365,7 @@ internal sealed class RoundManager : ModSystem
             return;
         }
 
+        RoundStartUtc = System.DateTime.UtcNow;
         int seconds = Math.Max(1, ModContent.GetInstance<ServerConfig>().RoundDurationSeconds);
         SetPhase(RoundPhase.Playing, SecondsToTicks(seconds));
     }
