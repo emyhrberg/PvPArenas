@@ -181,7 +181,7 @@ internal sealed class ArenaGameCommandButton : UIPanel
 
         Rectangle panel = GetDimensions().ToRectangle();
         string text = label?.Invoke() ?? "";
-        float scale = .78f;
+        float scale = .84f;
         Vector2 size = FontAssets.MouseText.Value.MeasureString(text) * scale;
         if (size.X > panel.Width - 14f)
         {

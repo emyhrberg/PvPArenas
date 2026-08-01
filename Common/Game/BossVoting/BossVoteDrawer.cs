@@ -1,6 +1,5 @@
 using PvPArenas.Common.AdminTools.UI;
 using PvPArenas.Core;
-using PvPArenas.Core.Compat;
 using PvPArenas.Core.Configs;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -108,8 +107,9 @@ internal static class BossVoteDrawer
             Rectangle tile = new((int)MathF.Round(start + step * i) - 6, row.Y + s(10), size, size);
             Color team = player.team > 0 && player.team < Main.teamColor.Length ? Main.teamColor[player.team] : Color.Gray;
             //DrawPanel(tile, Color.Lerp(player.shirtColor, team, .25f), DarkEdge, s(5));
-            ErkySSCCompat.DrawUnfilteredPlayerHead(player,
-                tile.Center.ToVector2() - new Vector2(-10f, 3f), animAlpha, .8f * scale, team * animAlpha);
+            Main.MapPlayerRenderer.DrawPlayerHead(Main.Camera, player,
+                tile.Center.ToVector2() - new Vector2(2f, 2f), animAlpha,
+                .6f * size / 26f, team * animAlpha);
             if (tile.Contains(mouse)) { Main.LocalPlayer.mouseInterface = true; Main.instance.MouseText(player.name); }
         }
     }

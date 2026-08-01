@@ -16,8 +16,8 @@ internal sealed class UIResizeHandle() : UIImageButton(Ass.IconResize)
         HAlign = VAlign = 1f;
         Left.Set(-2f, 0f);
         Top.Set(-2f, 0f);
-        Width.Set(20f, 0f);
-        Height.Set(20f, 0f);
+        Width.Set(26f, 0f);
+        Height.Set(26f, 0f);
     }
 
     public override void LeftMouseDown(UIMouseEvent evt)

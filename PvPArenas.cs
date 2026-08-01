@@ -1,3 +1,4 @@
+using PvPArenas.Common.AdminTools.WorldGenManager;
 using PvPArenas.Common.Game;
 using PvPArenas.Common.Game.BossVoting;
 using PvPArenas.Common.Game.LoadoutSelector;
@@ -14,22 +15,25 @@ public sealed class PvPArenas : Mod
     {
         CastVote,
         AdminRoundAction,
-        SelectLoadout
+        SelectLoadout,
+        WorldGenRequest,
+        WorldGenStatus
     }
 
     public override void HandlePacket(BinaryReader reader, int whoAmI)
     {
         PacketType type = (PacketType)reader.ReadByte();
-        if (Main.netMode != NetmodeID.Server)
-            return;
-
         switch (type)
         {
             case PacketType.CastVote:
+                if (Main.netMode != NetmodeID.Server)
+                    return;
                 ModContent.GetInstance<BossVoteSystem>().CastVote(whoAmI, reader.ReadByte());
                 break;
 
             case PacketType.AdminRoundAction:
+                if (Main.netMode != NetmodeID.Server)
+                    return;
                 RoundManager.AdminAction action = (RoundManager.AdminAction)reader.ReadByte();
                 if (!Enum.IsDefined(action))
                     return;
@@ -43,7 +47,17 @@ public sealed class PvPArenas : Mod
                 break;
 
             case PacketType.SelectLoadout:
+                if (Main.netMode != NetmodeID.Server)
+                    return;
                 ArenaPlayer.HandleLoadoutSelect(whoAmI, reader.ReadByte());
+                break;
+
+            case PacketType.WorldGenRequest:
+                WorldGenManagerNetHandler.HandleRequest(reader, whoAmI);
+                break;
+
+            case PacketType.WorldGenStatus:
+                WorldGenManagerNetHandler.HandleStatus(reader);
                 break;
         }
     }

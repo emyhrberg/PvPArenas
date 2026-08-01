@@ -38,7 +38,7 @@ internal abstract class UIDraggablePanel : UIElement
             BackgroundColor = new Color(63, 82, 151)
         };
         titleBar.SetPadding(0f);
-        titleBar.Append(new UIText(title, .7f, true) { HAlign = .5f, VAlign = .5f });
+        titleBar.Append(new UIText(title, .86f, true) { HAlign = .5f, VAlign = .5f });
 
         Content = new UIPanel
         {
@@ -53,7 +53,7 @@ internal abstract class UIDraggablePanel : UIElement
         refreshButton = HeaderButton(0f, new UIImage(Ass.IconRefresh.Value) { HAlign = .5f, VAlign = .5f });
         refreshButton.OnLeftClick += (_, _) => OnRefreshPanelLeftClick();
 
-        closeButton = HeaderButton(1f, new UIText("X", .55f, true) { HAlign = .5f, VAlign = .5f });
+        closeButton = HeaderButton(1f, new UIText("X", .72f, true) { HAlign = .5f, VAlign = .5f });
         closeButton.OnLeftClick += (_, _) =>
         {
             SoundEngine.PlaySound(SoundID.MenuClose);

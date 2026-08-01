@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Terraria.DataStructures;
 using Terraria.GameContent.Generation;
 using Terraria.Graphics.Light;
 using Terraria.ID;
@@ -31,6 +32,10 @@ internal sealed class WorldGenPassRunner : ModSystem
     private int seed;
     private int mapRefreshIndex = -1;
     private int lastLoggedPercent = -10;
+    private double operationProgress;
+    private double networkProgress;
+    private double networkElapsedSeconds;
+    private bool networkBackupAvailable;
     private bool busy;
 
     internal bool Busy { get { lock (stateLock) return busy; } }
@@ -38,11 +43,19 @@ internal sealed class WorldGenPassRunner : ModSystem
     internal string ActivePass { get { lock (stateLock) return activePass; } }
     internal string BackupPath { get { lock (stateLock) return backupPath; } }
     internal int Seed { get { lock (stateLock) return seed; } }
-    internal double Progress => progress?.TotalProgress ?? 0d;
-    internal TimeSpan Elapsed => timer?.Elapsed ?? TimeSpan.Zero;
+    internal double Progress => Main.netMode == NetmodeID.MultiplayerClient
+        ? networkProgress
+        : progress?.TotalProgress ?? operationProgress;
+    internal TimeSpan Elapsed => Main.netMode == NetmodeID.MultiplayerClient
+        ? TimeSpan.FromSeconds(networkElapsedSeconds)
+        : timer?.Elapsed ?? TimeSpan.Zero;
+    internal bool BackupAvailable => Main.netMode == NetmodeID.MultiplayerClient
+        ? networkBackupAvailable
+        : !string.IsNullOrWhiteSpace(BackupPath);
     internal IReadOnlyList<string> PassNames => WorldGen.VanillaGenPasses.Keys.ToArray();
 
     internal static bool IsDangerous(string name) => !string.IsNullOrWhiteSpace(name) && !TestedPasses.Contains(name);
+    internal static bool IsTested(string name) => !string.IsNullOrWhiteSpace(name) && TestedPasses.Contains(name);
 
     internal bool TryResolvePass(string input, out string name)
     {
@@ -52,18 +65,35 @@ internal sealed class WorldGenPassRunner : ModSystem
     }
 
     internal bool TryRun(string requestedPass, out string error)
+        => TryRun([requestedPass], out error);
+
+    internal bool TryRun(IReadOnlyList<string> requestedPasses, out string error)
     {
         error = "";
-        if (Main.netMode != NetmodeID.SinglePlayer)
+        if (Main.netMode == NetmodeID.MultiplayerClient)
         {
-            error = "World Gen Manager currently supports singleplayer only.";
+            error = "World-generation passes must be requested from the server.";
             return false;
         }
-        if (!TryResolvePass(requestedPass, out string passName))
+        if (requestedPasses == null || requestedPasses.Count == 0)
         {
-            error = $"Unknown vanilla world generation pass: {requestedPass}";
+            error = "Select at least one world-generation pass.";
             return false;
         }
+
+        List<string> passNames = new(requestedPasses.Count);
+        foreach (string requestedPass in requestedPasses)
+        {
+            if (!TryResolvePass(requestedPass, out string passName))
+            {
+                error = $"Unknown vanilla world generation pass: {requestedPass}";
+                return false;
+            }
+            if (!passNames.Contains(passName, StringComparer.OrdinalIgnoreCase))
+                passNames.Add(passName);
+        }
+
+        string jobName = passNames.Count == 1 ? passNames[0] : $"{passNames.Count} selected passes";
         lock (stateLock)
         {
             if (busy)
@@ -72,11 +102,12 @@ internal sealed class WorldGenPassRunner : ModSystem
                 return false;
             }
             busy = true;
-            activePass = passName;
+            activePass = jobName;
             seed = Random.Shared.Next(1, int.MaxValue);
             status = "Saving and backing up the world";
             backupPath = "";
             progress = new GenerationProgress();
+            operationProgress = 0d;
             timer = Stopwatch.StartNew();
             lastLoggedPercent = -10;
         }
@@ -91,10 +122,69 @@ internal sealed class WorldGenPassRunner : ModSystem
             WorldGen.Hooks.ProcessWorldGenConfig(ref configuration);
             LiveGenerationState previous = LiveGenerationState.Capture();
             Main.ToggleGameplayUpdates(false);
-            SetStatus($"Running {passName}");
-            Log.Info($"[WorldGenManager] START pass='{passName}' seed={seed} backup='{backupPath}'");
-            Main.NewText($"World Gen Manager: running '{passName}' with seed {seed}.", Color.Orange);
-            ThreadPool.QueueUserWorkItem(_ => RunWorker(passName, seed, configuration, previous));
+            SetStatus(passNames.Count == 1 ? $"Running {passNames[0]}" : $"Running {passNames.Count} passes in listed order");
+            Log.Info($"[WorldGenManager] START passes='{string.Join(" -> ", passNames)}' seed={seed} backup='{backupPath}'");
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                Main.NewText($"World Gen Manager: running {jobName} with seed {seed}.", Color.Orange);
+            ThreadPool.QueueUserWorkItem(_ => RunPassWorker(passNames, seed, configuration, previous));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            timer?.Stop();
+            Main.ToggleGameplayUpdates(gameplayUpdates);
+            SetFailed(exception);
+            error = exception.Message;
+            return false;
+        }
+    }
+
+    internal bool TryClear(WorldClearAction action, out string error)
+    {
+        error = "";
+        if (Main.netMode == NetmodeID.MultiplayerClient)
+        {
+            error = "World cleanup must be requested from the server.";
+            return false;
+        }
+        if (!Enum.IsDefined(action))
+        {
+            error = "Unknown world cleanup action.";
+            return false;
+        }
+
+        string jobName = ClearActionName(action);
+        lock (stateLock)
+        {
+            if (busy)
+            {
+                error = $"'{activePass}' is already running.";
+                return false;
+            }
+            busy = true;
+            activePass = jobName;
+            seed = 0;
+            status = "Saving and backing up the world";
+            backupPath = "";
+            progress = null;
+            operationProgress = 0d;
+            timer = Stopwatch.StartNew();
+            lastLoggedPercent = -10;
+        }
+
+        bool gameplayUpdates = Main.CanUpdateGameplay;
+        try
+        {
+            WorldFile.SaveWorld();
+            lock (stateLock)
+                backupPath = CreateBackup();
+            LiveGenerationState previous = LiveGenerationState.Capture();
+            Main.ToggleGameplayUpdates(false);
+            SetStatus(jobName);
+            Log.Info($"[WorldGenManager] START action='{action}' backup='{backupPath}'");
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                Main.NewText($"World Gen Manager: {jobName.ToLowerInvariant()}.", Color.Orange);
+            ThreadPool.QueueUserWorkItem(_ => RunClearWorker(action, previous));
             return true;
         }
         catch (Exception exception)
@@ -118,6 +208,8 @@ internal sealed class WorldGenPassRunner : ModSystem
                 Log.Info($"[WorldGenManager] {ActivePass}: {percent}% {progress?.Message}");
             }
         }
+        if (Busy && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 30 == 0)
+            WorldGenManagerNetHandler.SendStatus(this);
 
         if (mapRefreshIndex < 0 || Main.Map == null)
             return;
@@ -139,18 +231,24 @@ internal sealed class WorldGenPassRunner : ModSystem
     {
         mapRefreshIndex = -1;
         progress = null;
+        operationProgress = 0d;
+        networkProgress = 0d;
+        networkElapsedSeconds = 0d;
+        networkBackupAvailable = false;
     }
 
-    private void RunWorker(string passName, int runSeed, WorldGenConfiguration configuration, LiveGenerationState previous)
+    private void RunPassWorker(IReadOnlyList<string> passNames, int runSeed, WorldGenConfiguration configuration, LiveGenerationState previous)
     {
         Exception failure = null;
         try
         {
             PrepareLiveGeneration(configuration);
             WorldGenerator generator = new(runSeed, configuration);
-            if (passName.Equals("Floating Island Houses", StringComparison.OrdinalIgnoreCase))
+            if (passNames.Contains("Floating Island Houses", StringComparer.OrdinalIgnoreCase)
+                && !passNames.Contains("Floating Islands", StringComparer.OrdinalIgnoreCase))
                 generator.Append(WorldGen.VanillaGenPasses["Floating Islands"]);
-            generator.Append(WorldGen.VanillaGenPasses[passName]);
+            foreach (string passName in passNames)
+                generator.Append(WorldGen.VanillaGenPasses[passName]);
             generator.GenerateWorld(progress);
 
             SetStatus("Framing tiles and walls");
@@ -165,10 +263,60 @@ internal sealed class WorldGenPassRunner : ModSystem
             previous.Restore();
         }
 
-        Main.QueueMainThreadAction(() => FinishOnMainThread(passName, runSeed, failure, previous.GameplayUpdates));
+        string jobName = passNames.Count == 1 ? passNames[0] : $"{passNames.Count} selected passes";
+        Main.QueueMainThreadAction(() => FinishOnMainThread(jobName, runSeed, failure, previous.GameplayUpdates));
     }
 
-    private void FinishOnMainThread(string passName, int runSeed, Exception failure, bool gameplayUpdates)
+    private void RunClearWorker(WorldClearAction action, LiveGenerationState previous)
+    {
+        Exception failure = null;
+        try
+        {
+            WorldGen.generatingWorld = true;
+            WorldGen.gen = true;
+            WorldGen.noTileActions = true;
+            WorldGen.noMapUpdate = true;
+
+            int width = Main.maxTilesX;
+            int height = Main.maxTilesY;
+            long total = (long)width * height;
+            long processed = 0;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Tile tile = Main.tile[x, y];
+                    ApplyClearAction(tile, action);
+                    processed++;
+                }
+                operationProgress = processed / (double)total;
+            }
+
+            if (action is WorldClearAction.Tiles or WorldClearAction.Everything)
+                ClearTileBoundEntities();
+            if (action is WorldClearAction.Liquids or WorldClearAction.Everything)
+                Liquid.ReInit();
+            if (action is WorldClearAction.Tiles or WorldClearAction.Walls or WorldClearAction.Everything)
+            {
+                SetStatus("Framing tiles and walls");
+                WorldGen.RangeFrame(1, 1, Main.maxTilesX - 2, Main.maxTilesY - 2);
+            }
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            previous.Restore();
+        }
+
+        string jobName = ClearActionName(action);
+        Main.QueueMainThreadAction(() => FinishOnMainThread(jobName, 0, failure, previous.GameplayUpdates));
+    }
+
+    private void FinishOnMainThread(string jobName, int runSeed, Exception failure, bool gameplayUpdates)
     {
         Main.ToggleGameplayUpdates(gameplayUpdates);
         timer?.Stop();
@@ -176,31 +324,152 @@ internal sealed class WorldGenPassRunner : ModSystem
         if (failure != null)
         {
             SetFailed(failure);
-            Main.NewText($"World Gen Manager failed in '{passName}'. Exit without saving and restore the backup.", Color.Red);
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                Main.NewText($"World Gen Manager failed in '{jobName}'. Exit without saving and restore the backup.", Color.Red);
+            WorldGenManagerNetHandler.SendStatus(this);
             return;
         }
 
         try
         {
             SetStatus("Saving generated world");
-            Main.instance.ClearCachedTileDraws();
-            Lighting.Clear();
-            Main.instance.waterfallManager?.FindWaterfalls(true);
+            RefreshLocalRendering();
             WorldFile.SaveWorld();
+            if (Main.netMode == NetmodeID.Server)
+            {
+                NetMessage.SendData(MessageID.WorldData);
+                Netplay.ResetSections();
+            }
             mapRefreshIndex = 0;
+            ModContent.GetInstance<WorldGenDebugStats>().RestartScan();
             lock (stateLock)
             {
                 busy = false;
-                status = $"Completed {passName} in {timer.Elapsed.TotalSeconds:F1}s";
+                operationProgress = 1d;
+                status = $"Completed {jobName} in {timer.Elapsed.TotalSeconds:F1}s";
             }
-            Log.Info($"[WorldGenManager] END pass='{passName}' seed={runSeed} elapsed={timer.Elapsed.TotalSeconds:F1}s backup='{backupPath}'");
-            Main.NewText($"World Gen Manager: '{passName}' completed in {timer.Elapsed.TotalSeconds:F1}s.", Color.LightGreen);
+            Log.Info($"[WorldGenManager] END job='{jobName}' seed={runSeed} elapsed={timer.Elapsed.TotalSeconds:F1}s backup='{backupPath}'");
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                Main.NewText($"World Gen Manager: '{jobName}' completed in {timer.Elapsed.TotalSeconds:F1}s.", Color.LightGreen);
+            WorldGenManagerNetHandler.SendStatus(this);
         }
         catch (Exception exception)
         {
             SetFailed(exception);
-            Main.NewText("World generation finished, but final refresh/save failed. Restore the backup if needed.", Color.Red);
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                Main.NewText("World generation finished, but final refresh/save failed. Restore the backup if needed.", Color.Red);
+            WorldGenManagerNetHandler.SendStatus(this);
         }
+    }
+
+    private static void RefreshLocalRendering()
+    {
+        // Terraria's server-side Hardmode completion only invalidates network sections.
+        // Lighting._activeEngine is initialized by the graphical client and remains null
+        // on dedicated servers, so Lighting.Clear() must never run there.
+        if (Main.dedServ || Main.netMode == NetmodeID.Server)
+            return;
+
+        Main.instance.ClearCachedTileDraws();
+        Lighting.Clear();
+        Main.instance.waterfallManager?.FindWaterfalls(true);
+    }
+
+    internal void SetAwaitingServer(string message)
+    {
+        if (Main.netMode != NetmodeID.MultiplayerClient)
+            return;
+        lock (stateLock)
+        {
+            busy = true;
+            status = message;
+            activePass = "Waiting for server";
+            networkProgress = 0d;
+            networkElapsedSeconds = 0d;
+            networkBackupAvailable = false;
+        }
+    }
+
+    internal void ApplyNetworkStatus(bool isBusy, string currentStatus, string currentPass,
+        int currentSeed, double currentProgress, double elapsedSeconds, bool hasBackup)
+    {
+        if (Main.netMode != NetmodeID.MultiplayerClient)
+            return;
+        bool completed;
+        lock (stateLock)
+        {
+            completed = busy && !isBusy;
+            busy = isBusy;
+            status = currentStatus;
+            activePass = currentPass;
+            seed = currentSeed;
+            networkProgress = Math.Clamp(currentProgress, 0d, 1d);
+            networkElapsedSeconds = Math.Max(0d, elapsedSeconds);
+            networkBackupAvailable = hasBackup;
+        }
+        if (completed)
+        {
+            mapRefreshIndex = 0;
+            ModContent.GetInstance<WorldGenDebugStats>().RestartScan();
+        }
+    }
+
+    internal static string ClearActionName(WorldClearAction action) => action switch
+    {
+        WorldClearAction.Tiles => "Clear all tiles",
+        WorldClearAction.Walls => "Clear all walls",
+        WorldClearAction.Liquids => "Clear all liquids",
+        WorldClearAction.Wiring => "Clear all wiring and actuators",
+        WorldClearAction.PaintAndCoatings => "Clear all paint and coatings",
+        WorldClearAction.Everything => "Clear the entire tilemap",
+        _ => "World cleanup"
+    };
+
+    private static void ApplyClearAction(Tile tile, WorldClearAction action)
+    {
+        switch (action)
+        {
+            case WorldClearAction.Tiles:
+                tile.ClearTile();
+                tile.ClearBlockPaintAndCoating();
+                break;
+
+            case WorldClearAction.Walls:
+                tile.WallType = WallID.None;
+                tile.ClearWallPaintAndCoating();
+                break;
+
+            case WorldClearAction.Liquids:
+                tile.LiquidAmount = 0;
+                tile.LiquidType = LiquidID.Water;
+                break;
+
+            case WorldClearAction.Wiring:
+                tile.RedWire = false;
+                tile.BlueWire = false;
+                tile.GreenWire = false;
+                tile.YellowWire = false;
+                tile.HasActuator = false;
+                tile.IsActuated = false;
+                break;
+
+            case WorldClearAction.PaintAndCoatings:
+                tile.ClearBlockPaintAndCoating();
+                tile.ClearWallPaintAndCoating();
+                break;
+
+            case WorldClearAction.Everything:
+                tile.ClearEverything();
+                break;
+        }
+    }
+
+    private static void ClearTileBoundEntities()
+    {
+        Array.Clear(Main.chest);
+        Array.Clear(Main.sign);
+        TileEntity.ByID.Clear();
+        TileEntity.ByPosition.Clear();
     }
 
     private void PrepareLiveGeneration(WorldGenConfiguration configuration)

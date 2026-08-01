@@ -1,11 +1,12 @@
 using System;
 using System.Linq;
+using Terraria.ID;
 
 namespace PvPArenas.Common.AdminTools.WorldGenManager;
 
 internal sealed class WorldGenManagerCommand : ModCommand
 {
-    public override CommandType Type => CommandType.World | CommandType.Console;
+    public override CommandType Type => CommandType.Chat | CommandType.Console;
     public override string Command => "worldgen";
     public override string Usage => "/worldgen <ui|status|list [page]|run <pass name>>";
     public override string Description => "Runs a vanilla world-generation pass in the loaded world.";
@@ -23,10 +24,10 @@ internal sealed class WorldGenManagerCommand : ModCommand
         {
             case "ui":
             case "open":
-                if (Main.netMode == Terraria.ID.NetmodeID.SinglePlayer)
+                if (!Main.dedServ)
                     ModContent.GetInstance<WorldGenManagerUISystem>().Toggle();
                 else
-                    caller.Reply("The World Gen Manager UI is singleplayer-only in this version.", Color.OrangeRed);
+                    caller.Reply("The World Gen Manager UI is available in-game; use status/list/run from the server console.", Color.OrangeRed);
                 break;
 
             case "status":
@@ -50,7 +51,7 @@ internal sealed class WorldGenManagerCommand : ModCommand
                     caller.Reply($"'{name}' is untested or destructive. Run '/worldgen run {name} confirm' to continue.", Color.OrangeRed);
                     return;
                 }
-                if (!runner.TryRun(name, out string error))
+                if (!WorldGenManagerNetHandler.RequestRunPasses([name], out string error))
                     caller.Reply(error, Color.OrangeRed);
                 break;
 

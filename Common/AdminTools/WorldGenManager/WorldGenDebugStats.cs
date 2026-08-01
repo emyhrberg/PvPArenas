@@ -56,6 +56,17 @@ internal sealed class WorldGenDebugStats : ModSystem
         wallCounts = null;
     }
 
+    internal void RestartScan()
+    {
+        if (tileCounts == null || wallCounts == null)
+            return;
+        Array.Clear(tileCounts);
+        Array.Clear(wallCounts);
+        working = new Snapshot();
+        cursor = 0;
+        sweepStartTick = Main.GameUpdateCount;
+    }
+
     public override void PostUpdateEverything()
     {
         if (Main.dedServ || tileCounts == null || Main.maxTilesX <= 0)
@@ -80,7 +91,7 @@ internal sealed class WorldGenDebugStats : ModSystem
                     working.HalfBricks++;
                 if (tile.Slope != SlopeType.Solid)
                     working.Slopes++;
-                if (tile.TileColor != 0)
+                if (tile.TileColor != PaintID.None)
                     working.Painted++;
                 if (tile.IsTileInvisible)
                     working.Coated++;

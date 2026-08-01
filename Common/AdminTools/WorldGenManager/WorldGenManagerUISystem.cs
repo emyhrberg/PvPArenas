@@ -10,7 +10,13 @@ internal sealed class WorldGenManagerUISystem : ModSystem
     private UIState state;
 
     internal bool IsActive => ui?.CurrentState == state;
-    internal void Toggle() => ui?.SetState(IsActive ? null : state);
+    internal void Toggle()
+    {
+        bool opening = !IsActive;
+        ui?.SetState(opening ? state : null);
+        if (opening)
+            WorldGenManagerNetHandler.RequestStatus();
+    }
     internal void Close() => ui?.SetState(null);
 
     public override void OnWorldLoad()
