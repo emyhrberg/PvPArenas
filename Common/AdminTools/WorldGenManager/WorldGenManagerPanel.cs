@@ -16,22 +16,25 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
     private string armedPass;
     private uint armedUntil;
 
-    protected override float MinResizeW => 480f;
+    private const float LeftWidth = 300f;
+
+    protected override float MinResizeW => 720f;
     protected override float MinResizeH => 500f;
-    protected override float MaxResizeW => 720f;
-    protected override float MaxResizeH => 820f;
+    protected override float MaxResizeW => 1200f;
+    protected override float MaxResizeH => 900f;
 
     internal WorldGenManagerPanel() : base("World Gen Manager")
     {
-        Width.Set(560f, 0f);
-        Height.Set(680f, 0f);
+        Width.Set(920f, 0f);
+        Height.Set(720f, 0f);
         HAlign = .5f;
-        Top.Set(70f, 0f);
+        Top.Set(60f, 0f);
         Content.SetPadding(8f);
 
         WorldGenSummary summary = new()
         {
-            Width = { Percent = 1f },
+            Left = { Pixels = 0f },
+            Width = { Pixels = LeftWidth },
             Height = { Pixels = 92f }
         };
         Content.Append(summary);
@@ -43,22 +46,24 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
             () => WorldGenPassRunner.IsDangerous(selectedPass),
             RunSelected)
         {
+            Left = { Pixels = 0f },
             Top = { Pixels = 101f },
-            Width = { Percent = 1f },
+            Width = { Pixels = LeftWidth },
             Height = { Pixels = 38f }
         };
         Content.Append(run);
 
         passList = new UIList
         {
+            Left = { Pixels = 0f },
             Top = { Pixels = 149f },
-            Width = { Pixels = -29f, Percent = 1f },
+            Width = { Pixels = LeftWidth - 24f },
             Height = { Pixels = -149f, Percent = 1f },
             ListPadding = 3f
         };
         UIScrollbar scrollbar = new()
         {
-            Left = { Pixels = -21f, Percent = 1f },
+            Left = { Pixels = LeftWidth - 20f },
             Top = { Pixels = 149f },
             Width = { Pixels = 20f },
             Height = { Pixels = -149f, Percent = 1f }
@@ -66,6 +71,16 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         passList.SetScrollbar(scrollbar);
         Content.Append(passList);
         Content.Append(scrollbar);
+
+        WorldGenDebugView debug = new()
+        {
+            Left = { Pixels = LeftWidth + 12f },
+            Top = { Pixels = 0f },
+            Width = { Pixels = -(LeftWidth + 12f), Percent = 1f },
+            Height = { Percent = 1f }
+        };
+        Content.Append(debug);
+
         RebuildList();
     }
 

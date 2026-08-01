@@ -216,6 +216,58 @@ internal sealed class WorldGenPassRunner : ModSystem
         GenVars.skyLakes = 1 + (Main.maxTilesX > 6000 ? 1 : 0) + (Main.maxTilesX > 8000 ? 1 : 0);
         GenVars.UndergroundDesertLocation = Rectangle.Empty;
 
+        // Port of WorldGen.GenerateWorld's GenVars initialization (Terraria/WorldGen.cs
+        // ~7597-7657), minus the surface/rock-layer zeroing (kept live above, since the
+        // vanilla Terrain pass would otherwise fill them) and minus PreWorldGen /
+        // AddGenPassesFromLoadTime (we append only the requested pass). Without this,
+        // isolated passes read stale/zero prerequisites and place features off-screen,
+        // at the world origin, or no-op entirely.
+        GenVars.desertHiveHigh = Main.maxTilesY;
+        GenVars.desertHiveLow = 0;
+        GenVars.desertHiveLeft = Main.maxTilesX;
+        GenVars.desertHiveRight = 0;
+        GenVars.copper = 7;
+        GenVars.iron = 6;
+        GenVars.silver = 9;
+        GenVars.gold = 8;
+        GenVars.dungeonSide = 0;
+        GenVars.dungeonLocation = 0;
+        GenVars.jungleHut = (ushort)Main.rand.Next(5);
+        GenVars.shellStartXLeft = 0;
+        GenVars.shellStartYLeft = 0;
+        GenVars.shellStartXRight = 0;
+        GenVars.shellStartYRight = 0;
+        GenVars.PyrX = null;
+        GenVars.PyrY = null;
+        GenVars.numPyr = 0;
+        GenVars.jungleMinX = -1;
+        GenVars.jungleMaxX = -1;
+        GenVars.jungleOriginX = 0;
+        GenVars.snowMinX = new int[Main.maxTilesY];
+        GenVars.snowMaxX = new int[Main.maxTilesY];
+        GenVars.snowTop = 0;
+        GenVars.snowBottom = 0;
+        GenVars.snowOriginLeft = 0;
+        GenVars.snowOriginRight = 0;
+        GenVars.logX = -1;
+        GenVars.logY = -1;
+        GenVars.beachBordersWidth = 275;
+        GenVars.beachSandRandomCenter = GenVars.beachBordersWidth + 5 + 40;
+        GenVars.beachSandRandomWidthRange = 20;
+        GenVars.beachSandDungeonExtraWidth = 40;
+        GenVars.beachSandJungleExtraWidth = 20;
+        GenVars.oceanWaterStartRandomMin = 220;
+        GenVars.oceanWaterStartRandomMax = GenVars.oceanWaterStartRandomMin + 40;
+        GenVars.oceanWaterForcedJungleLength = 275;
+        GenVars.leftBeachEnd = 0;
+        GenVars.rightBeachStart = 0;
+        GenVars.evilBiomeBeachAvoidance = GenVars.beachSandRandomCenter + 60;
+        GenVars.evilBiomeAvoidanceMidFixer = 50;
+        GenVars.lakesBeachAvoidance = GenVars.beachSandRandomCenter + 20;
+        GenVars.smallHolesBeachAvoidance = GenVars.beachSandRandomCenter + 20;
+        GenVars.surfaceCavesBeachAvoidance = GenVars.beachSandRandomCenter + 20;
+        GenVars.surfaceCavesBeachAvoidance2 = GenVars.beachSandRandomCenter + 20;
+
         WorldGen.drunkWorldGen = Main.drunkWorld;
         WorldGen.getGoodWorldGen = Main.getGoodWorld;
         WorldGen.tenthAnniversaryWorldGen = Main.tenthAnniversaryWorld;
