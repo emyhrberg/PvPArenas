@@ -119,7 +119,7 @@ internal static class MatchReporter
                 continue;
             }
 
-            payloadPlayers[steamId] = BuildPlayerPayload(player, boss);
+            payloadPlayers[steamId] = BuildPlayerPayload(player);
             if (seenSteamIds.Add(steamId))
                 recipients.Add(new GemRecipient(steamId, player.PlayerIndex));
         }
@@ -130,7 +130,8 @@ internal static class MatchReporter
             GameMode,
             payloadPlayers,
             new Dictionary<string, string> { [MatchTokenMetric] = matchToken },
-            BuildTeams(players, winningTeam, boss));
+            BuildTeams(players, winningTeam, boss),
+            boss);
 
         // Permanent local backup before validation/auth — a match is never lost to an API failure.
         try
@@ -165,7 +166,7 @@ internal static class MatchReporter
         _ = PostAsync(payload, presentationKey, recipients);
     }
 
-    private static MatchPlayerPayload BuildPlayerPayload(ReportPlayer player, short boss)
+    private static MatchPlayerPayload BuildPlayerPayload(ReportPlayer player)
     {
         uint bossDamage = Clamp(player.BossDamage);
 
@@ -183,11 +184,6 @@ internal static class MatchReporter
         if (bossDamageByItem.Count > 0)
             itemStats[BossDamageDealtStat] = bossDamageByItem;
 
-        // A round is a single boss fight, so per-boss damage is one entry keyed by the round's NPC type.
-        Dictionary<short, uint> bossDamageByBoss = [];
-        if (boss > 0 && bossDamage > 0)
-            bossDamageByBoss[boss] = bossDamage;
-
         return new MatchPlayerPayload(
             player.Name ?? "",
             (uint)player.Team,
@@ -198,7 +194,7 @@ internal static class MatchReporter
             stats,
             itemStats,
             [], // Arenas has no gem-capture mechanic.
-            bossDamageByBoss);
+            bossDamage);
     }
 
     private static List<MatchTeamPayload?> BuildTeams(

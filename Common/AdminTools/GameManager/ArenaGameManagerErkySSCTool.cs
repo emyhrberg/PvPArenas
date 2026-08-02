@@ -1,5 +1,8 @@
 ﻿using System;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using PvPArenas.Common.AdminTools.UI;
+using ReLogic.Content;
 
 namespace PvPArenas.Common.AdminTools.GameManager;
 
@@ -27,21 +30,22 @@ internal sealed class ArenaGameManagerErkySSCTool : ModSystem
 
         // Arena Game Manager
         Add(mod, GameOwner, "arena_game_manager", "Arenas: Game Manager",
-            "Start and end rounds and voting", 31,
+            "Start and end rounds and voting", VanillaAdminIcons.PlayPause.Asset, 31,
             () => ModContent.GetInstance<ArenaGameManagerUISystem>().Toggle(),
             () => ModContent.GetInstance<ArenaGameManagerUISystem>().IsActive);
 
         Add(mod, WorldGenOwner, "world_gen_manager", "Arenas: World Gen Manager",
-            "Generate, clean, inspect, and control the loaded world's visuals", 32,
+            "Generate, clean, inspect, and control the loaded world's visuals", VanillaAdminIcons.MixedSeed.Asset, 32,
             () => ModContent.GetInstance<WorldGenManager.WorldGenManagerUISystem>().Toggle(),
             () => ModContent.GetInstance<WorldGenManager.WorldGenManagerUISystem>().IsActive);
     }
 
-    private static void Add(Mod mod, string owner, string key, string title, string tooltip, int order, Action toggle, Func<bool> active)
+    private static void Add(Mod mod, string owner, string key, string title, string tooltip,
+        Asset<Texture2D> icon, int order, Action toggle, Func<bool> active)
     {
         try
         {
-            object result = mod.Call("RegisterAdminQuickbarEntry", owner, key, title, tooltip, Ass.IconArenas,
+            object result = mod.Call("RegisterAdminQuickbarEntry", owner, key, title, tooltip, icon,
                 toggle, new Func<string>(() => active() ? "Close" : "Open"), new Func<Color>(() => Color.White), true, order, "");
             if (result is not true)
                 Log.Warn($"ErkySSC rejected admin quickbar registration. owner={owner}, id={key}");

@@ -59,10 +59,10 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         };
         Content.Append(tabs);
 
-        AddTab(tabs, Section.Passes, "GENERATION PASSES", "Choose one or more numbered vanilla passes");
-        AddTab(tabs, Section.World, "WORLD CLEANUP", "Clear tiles, walls, liquids, wiring, paint, or everything");
-        AddTab(tabs, Section.Visuals, "VISUALS", "Locally hide scenery while inspecting the world");
-        AddTab(tabs, Section.Debug, "DEBUG INFO", "Compact live world data arranged in columns");
+        AddTab(tabs, Section.Passes, "GENERATION PASSES", "Choose one or more numbered vanilla passes", VanillaAdminIcons.MixedSeed);
+        AddTab(tabs, Section.World, "WORLD CLEANUP", "Clear tiles, walls, liquids, wiring, paint, or everything", VanillaAdminIcons.Reforge);
+        AddTab(tabs, Section.Visuals, "VISUALS", "Locally hide scenery while inspecting the world", VanillaAdminIcons.Camera);
+        AddTab(tabs, Section.Debug, "DEBUG INFO", "Compact live world data arranged in columns", VanillaAdminIcons.Info(4));
 
         pageHost = new UIElement
         {
@@ -101,16 +101,16 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         page.Append(SectionTitle("Generation passes", "Select any number of passes. They always run top-to-bottom in the numbered vanilla order."));
 
         page.Append(CommandButton(() => "Tested only", () => "Select the passes explicitly tested for live-world use",
-            () => !Runner.Busy, () => false, SelectTested, 0f, 58f, .16f));
+            () => !Runner.Busy, () => false, SelectTested, 0f, 58f, .16f, () => VanillaAdminIcons.Rank));
         page.Append(CommandButton(() => "Select all", () => "Select every vanilla pass; risky passes still require confirmation",
-            () => !Runner.Busy, () => false, SelectAll, .17f, 58f, .16f));
+            () => !Runner.Busy, () => false, SelectAll, .17f, 58f, .16f, () => VanillaAdminIcons.MixedSeed));
         page.Append(CommandButton(() => "Clear selection", () => "Uncheck every generation pass",
-            () => !Runner.Busy && selectedPasses.Count > 0, () => false, ClearSelection, .34f, 58f, .16f));
+            () => !Runner.Busy && selectedPasses.Count > 0, () => false, ClearSelection, .34f, 58f, .16f, () => VanillaAdminIcons.Reset));
 
         ArenaGameCommandButton run = CommandButton(RunLabel, RunTooltip,
             () => !Runner.Busy && selectedPasses.Count > 0,
             () => SelectedInOrder().Any(WorldGenPassRunner.IsDangerous),
-            RunSelected, .52f, 58f, .48f);
+            RunSelected, .52f, 58f, .48f, () => VanillaAdminIcons.PlayPause);
         page.Append(run);
 
         UIPanel listPanel = new()
@@ -128,7 +128,8 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         {
             Width = { Pixels = -28f, Percent = 1f },
             Height = { Percent = 1f },
-            ListPadding = 5f
+            ListPadding = 2f,
+            ManualSortMethod = _ => { }
         };
         UIScrollbar scrollbar = new()
         {
@@ -171,9 +172,9 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         page.Append(SectionTitle("Visual inspection", "These switches affect only this client and do not change or save the world."));
 
         page.Append(CommandButton(() => "Show all scenery", () => "Enable every scenery layer",
-            () => true, () => false, () => WorldGenVisualSystem.SetAll(true), 0f, 58f, .24f));
+            () => true, () => false, () => WorldGenVisualSystem.SetAll(true), 0f, 58f, .24f, () => VanillaAdminIcons.Rank));
         page.Append(CommandButton(() => "Hide all scenery", () => "Disable every listed scenery layer",
-            () => true, () => false, () => WorldGenVisualSystem.SetAll(false), .25f, 58f, .24f));
+            () => true, () => false, () => WorldGenVisualSystem.SetAll(false), .25f, 58f, .24f, () => VanillaAdminIcons.Camera));
 
         (WorldVisualLayer Layer, string Label, string Description)[] layers =
         [
@@ -200,10 +201,10 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
         return page;
     }
 
-    private void AddTab(UIElement parent, Section section, string label, string tooltip)
+    private void AddTab(UIElement parent, Section section, string label, string tooltip, AdminUIIcon icon)
     {
         int index = (int)section;
-        parent.Append(new WorldGenTabButton(label, tooltip, () => activeSection == section, () => ShowSection(section))
+        parent.Append(new WorldGenTabButton(label, tooltip, icon, () => activeSection == section, () => ShowSection(section))
         {
             Left = { Pixels = index == 0 ? 0f : 5f, Percent = index * .25f },
             Width = { Pixels = -5f, Percent = .25f },
@@ -373,8 +374,8 @@ internal sealed class WorldGenManagerPanel : UIDraggablePanel
     }
 
     private static ArenaGameCommandButton CommandButton(Func<string> label, Func<string> tooltip,
-        Func<bool> enabled, Func<bool> danger, Action action, float leftPercent, float top, float widthPercent) => new(
-            label, tooltip, enabled, danger, action)
+        Func<bool> enabled, Func<bool> danger, Action action, float leftPercent, float top, float widthPercent,
+        Func<AdminUIIcon> icon = null) => new(label, tooltip, enabled, danger, action, icon)
         {
             Left = { Percent = leftPercent },
             Top = { Pixels = top },
@@ -419,13 +420,15 @@ internal sealed class WorldGenTabButton : UIPanel
 {
     private readonly string label;
     private readonly string tooltip;
+    private readonly AdminUIIcon icon;
     private readonly Func<bool> selected;
     private readonly Action action;
 
-    internal WorldGenTabButton(string label, string tooltip, Func<bool> selected, Action action)
+    internal WorldGenTabButton(string label, string tooltip, AdminUIIcon icon, Func<bool> selected, Action action)
     {
         this.label = label;
         this.tooltip = tooltip;
+        this.icon = icon;
         this.selected = selected;
         this.action = action;
         SetPadding(0f);
@@ -454,7 +457,23 @@ internal sealed class WorldGenTabButton : UIPanel
         BorderColor = IsMouseHovering ? Color.Yellow : active ? new Color(130, 164, 255) : Color.Black;
         base.DrawSelf(spriteBatch);
         Rectangle box = GetDimensions().ToRectangle();
-        DrawCentered(spriteBatch, label, box, active ? Color.White : new Color(190, 205, 235), .75f);
+        Color color = active ? Color.White : new Color(190, 205, 235);
+        const float iconSize = 24f;
+        const float gap = 6f;
+        float scale = .72f;
+        Vector2 textSize = FontAssets.MouseText.Value.MeasureString(label) * scale;
+        float maxTextWidth = Math.Max(1f, box.Width - iconSize - gap - 16f);
+        if (textSize.X > maxTextWidth)
+        {
+            scale *= maxTextWidth / textSize.X;
+            textSize = FontAssets.MouseText.Value.MeasureString(label) * scale;
+        }
+        float left = box.Center.X - (iconSize + gap + textSize.X) * .5f;
+        VanillaAdminIcons.DrawFitted(spriteBatch, icon,
+            new Rectangle((int)left, box.Center.Y - (int)(iconSize * .5f), (int)iconSize, (int)iconSize),
+            color, allowUpscale: true);
+        Utils.DrawBorderString(spriteBatch, label,
+            new Vector2(left + iconSize + gap, box.Center.Y - textSize.Y * .5f + 2f), color, scale);
     }
 
     internal static void DrawCentered(SpriteBatch spriteBatch, string text, Rectangle box, Color color, float scale)
@@ -485,7 +504,7 @@ internal sealed class WorldGenPassRow : UIElement
         this.runIndex = runIndex;
         this.action = action;
         Width.Set(0f, 1f);
-        Height.Set(44f, 0f);
+        Height.Set(28f, 0f);
     }
 
     public override void LeftClick(UIMouseEvent evt)
@@ -518,23 +537,28 @@ internal sealed class WorldGenPassRow : UIElement
             : active ? new Color(65, 91, 169) : IsMouseHovering ? new Color(48, 65, 120) : new Color(34, 45, 86);
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, box, fill);
 
-        Rectangle check = new(box.X + 10, box.Y + 10, 24, 24);
+        Rectangle check = new(box.X + 6, box.Y + 6, 16, 16);
         DrawOutline(spriteBatch, check, active ? new Color(145, 190, 255) : new Color(112, 132, 175));
         if (active)
         {
-            Rectangle mark = new(check.X + 5, check.Y + 5, check.Width - 10, check.Height - 10);
+            Rectangle mark = new(check.X + 4, check.Y + 4, check.Width - 8, check.Height - 8);
             spriteBatch.Draw(TextureAssets.MagicPixel.Value, mark, Color.White);
         }
 
-        Utils.DrawBorderString(spriteBatch, $"{order:00}", new Vector2(box.X + 45, box.Y + 11), new Color(174, 216, 226), .70f);
-        DrawFit(spriteBatch, name, new Vector2(box.X + 82, box.Y + 10), Color.White, .78f, Math.Max(50f, box.Width - 265f));
+        Utils.DrawBorderString(spriteBatch, $"{order:00}", new Vector2(box.X + 29, box.Y + 7), new Color(174, 216, 226), .53f);
+        Color iconTint = danger
+            ? active ? new Color(255, 205, 175) : new Color(220, 155, 140)
+            : active ? Color.White : new Color(170, 205, 220);
+        VanillaAdminIcons.DrawFitted(spriteBatch, VanillaAdminIcons.ForPass(name),
+            new Rectangle(box.X + 52, box.Y + 4, 20, 20), iconTint);
+        DrawFit(spriteBatch, name, new Vector2(box.X + 80, box.Y + 5), Color.White, .62f, Math.Max(50f, box.Width - 260f));
 
         string badge = danger ? "RISK" : "TESTED";
         Color badgeColor = danger ? new Color(255, 165, 120) : new Color(145, 230, 175);
-        DrawFit(spriteBatch, badge, new Vector2(box.Right - 158, box.Y + 12), badgeColor, .58f, 66f);
+        DrawFit(spriteBatch, badge, new Vector2(box.Right - 154, box.Y + 7), badgeColor, .48f, 62f);
         int execution = runIndex();
         if (execution > 0)
-            DrawFit(spriteBatch, $"RUN {execution}", new Vector2(box.Right - 82, box.Y + 12), Color.LightBlue, .60f, 70f);
+            DrawFit(spriteBatch, $"RUN {execution}", new Vector2(box.Right - 78, box.Y + 7), Color.LightBlue, .50f, 66f);
     }
 
     internal static void DrawOutline(SpriteBatch batch, Rectangle rect, Color color)
@@ -601,7 +625,10 @@ internal sealed class WorldCleanupCard : UIPanel
 
         Rectangle box = GetDimensions().ToRectangle();
         string title = confirm ? $"CONFIRM: {WorldGenPassRunner.ClearActionName(action)}" : WorldGenPassRunner.ClearActionName(action);
-        DrawFit(spriteBatch, title, new Vector2(box.X + 14, box.Y + 12), available ? Color.White : Color.Gray, .82f, box.Width - 28f);
+        Color contentColor = available ? Color.White : Color.Gray;
+        VanillaAdminIcons.DrawFitted(spriteBatch, VanillaAdminIcons.ForCleanup(action),
+            new Rectangle(box.X + 14, box.Y + 9, 30, 30), contentColor, allowUpscale: true);
+        DrawFit(spriteBatch, title, new Vector2(box.X + 52, box.Y + 12), contentColor, .82f, box.Width - 66f);
         DrawFit(spriteBatch, Description(action, false), new Vector2(box.X + 14, box.Y + 47), new Color(224, 190, 194), .63f, box.Width - 28f);
         DrawFit(spriteBatch, "BACKUP + TWO-CLICK CONFIRM", new Vector2(box.X + 14, box.Bottom - 25), new Color(255, 174, 118), .53f, box.Width - 28f);
     }
@@ -667,8 +694,11 @@ internal sealed class WorldVisualToggle : UIPanel
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, toggle, shown ? new Color(66, 145, 102) : new Color(125, 48, 58));
         WorldGenPassRow.DrawOutline(spriteBatch, toggle, shown ? new Color(160, 245, 190) : new Color(255, 150, 150));
         WorldGenTabButton.DrawCentered(spriteBatch, shown ? "✓" : "×", toggle, Color.White, .85f);
-        Utils.DrawBorderString(spriteBatch, label, new Vector2(box.X + 68, box.Y + 11), Color.White, .82f);
-        Utils.DrawBorderString(spriteBatch, shown ? "VISIBLE" : "HIDDEN", new Vector2(box.X + 68, box.Y + 39),
+        VanillaAdminIcons.DrawFitted(spriteBatch, VanillaAdminIcons.ForVisual(layer),
+            new Rectangle(box.X + 66, box.Y + 10, 26, 26), shown ? Color.White : new Color(210, 170, 175),
+            allowUpscale: true);
+        Utils.DrawBorderString(spriteBatch, label, new Vector2(box.X + 100, box.Y + 11), Color.White, .82f);
+        Utils.DrawBorderString(spriteBatch, shown ? "VISIBLE" : "HIDDEN", new Vector2(box.X + 100, box.Y + 39),
             shown ? new Color(145, 230, 175) : new Color(255, 155, 155), .60f);
     }
 }

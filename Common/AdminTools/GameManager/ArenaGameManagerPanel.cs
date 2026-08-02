@@ -41,7 +41,10 @@ internal sealed class ArenaGameManagerPanel : UIDraggablePanel
             RoundButtonTooltip,
             () => Manager.CurrentPhase != RoundManager.RoundPhase.Generating,
             () => Manager.CurrentPhase == RoundManager.RoundPhase.Playing,
-            ToggleRound)
+            ToggleRound,
+            () => Manager.CurrentPhase == RoundManager.RoundPhase.Playing
+                ? VanillaAdminIcons.Pause
+                : VanillaAdminIcons.PlayPause)
         {
             Left = { Pixels = 8 },
             Top = { Pixels = 32 },
@@ -54,7 +57,8 @@ internal sealed class ArenaGameManagerPanel : UIDraggablePanel
             VotingButtonTooltip,
             () => Manager.CurrentPhase != RoundManager.RoundPhase.Generating,
             () => Manager.CurrentPhase == RoundManager.RoundPhase.VotingOrEndScreen,
-            ToggleVoting)
+            ToggleVoting,
+            () => VanillaAdminIcons.PlayPause)
         {
             Left = { Pixels = 3, Percent = 1f / 3f },
             Top = { Pixels = 32 },
@@ -68,7 +72,8 @@ internal sealed class ArenaGameManagerPanel : UIDraggablePanel
             () => Manager.CurrentPhase != RoundManager.RoundPhase.Generating
                 && !(Manager.CurrentPhase == RoundManager.RoundPhase.WaitingForPlayers && Manager.IsIdleHeld),
             () => Manager.CurrentPhase == RoundManager.RoundPhase.Playing,
-            () => RoundManager.RequestAdminAction(RoundManager.AdminAction.SetIdle))
+            () => RoundManager.RequestAdminAction(RoundManager.AdminAction.SetIdle),
+            () => VanillaAdminIcons.Pause)
         {
             Left = { Pixels = -2, Percent = 2f / 3f },
             Top = { Pixels = 32 },
@@ -101,7 +106,8 @@ internal sealed class ArenaGameManagerPanel : UIDraggablePanel
             () => Manager.CurrentPhase is RoundManager.RoundPhase.WaitingForPlayers
                 or RoundManager.RoundPhase.VotingOrEndScreen,
             () => false,
-            () => RoundManager.RequestAdminAction(RoundManager.AdminAction.AutoBalanceTeams))
+            () => RoundManager.RequestAdminAction(RoundManager.AdminAction.AutoBalanceTeams),
+            () => VanillaAdminIcons.MixedSeed)
         {
             Left = { Pixels = 8 },
             Top = { Pixels = 66 },

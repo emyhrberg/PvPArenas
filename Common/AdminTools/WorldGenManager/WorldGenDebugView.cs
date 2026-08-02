@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework.Graphics;
+using PvPArenas.Common.AdminTools.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace PvPArenas.Common.AdminTools.WorldGenManager;
 internal sealed class WorldGenDebugView : UIPanel
 {
     private sealed record DebugRow(string Label, string Value, string Details);
-    private sealed record DebugSection(string Title, string Details, List<DebugRow> Rows);
+    private sealed record DebugSection(string Title, string Details, AdminUIIcon Icon, List<DebugRow> Rows);
 
     private const float CardGap = 10f;
     private const float CardHeaderHeight = 29f;
@@ -92,7 +93,10 @@ internal sealed class WorldGenDebugView : UIPanel
 
         Rectangle clipped = Rectangle.Intersect(card, viewport);
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, clipped, new Color(25, 34, 73) * .96f);
-        DrawClippedLine(spriteBatch, viewport, section.Title, new Vector2(card.X + 9, card.Y + 6), HeaderColor, HeaderScale, card.Width - 18f);
+        Rectangle iconBox = new(card.X + 7, card.Y + 5, 19, 19);
+        if (iconBox.Intersects(viewport))
+            VanillaAdminIcons.DrawFitted(spriteBatch, section.Icon, iconBox, Color.White, allowUpscale: true);
+        DrawClippedLine(spriteBatch, viewport, section.Title, new Vector2(card.X + 32, card.Y + 6), HeaderColor, HeaderScale, card.Width - 41f);
 
         Rectangle header = new(card.X, card.Y, card.Width, (int)CardHeaderHeight);
         if (viewport.Contains(Main.MouseScreen.ToPoint()) && header.Contains(Main.MouseScreen.ToPoint()))
@@ -239,7 +243,8 @@ internal sealed class WorldGenDebugView : UIPanel
         Add("HOVERED TILE", "Live data for the tile beneath the mouse cursor in the world.", rows.ToArray());
     }
 
-    private void Add(string title, string details, params DebugRow[] rows) => sections.Add(new DebugSection(title, details, [.. rows]));
+    private void Add(string title, string details, params DebugRow[] rows) =>
+        sections.Add(new DebugSection(title, details, VanillaAdminIcons.ForDebugSection(title), [.. rows]));
 
     private static DebugRow Row(string label, string value, string details) => new(label, value, details);
     private static DebugRow CountRow(string label, long count) => Row(label, Compact(count), $"{count:N0}");

@@ -1,4 +1,5 @@
 using PvPArenas.Common.Game;
+using PvPArenas.Common.AdminTools.UI;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -132,15 +133,17 @@ internal sealed class ArenaGameCommandButton : UIPanel
     private readonly Func<bool> enabled;
     private readonly Func<bool> danger;
     private readonly Action action;
+    private readonly Func<AdminUIIcon> icon;
 
     internal ArenaGameCommandButton(Func<string> label, Func<string> tooltip,
-        Func<bool> enabled, Func<bool> danger, Action action)
+        Func<bool> enabled, Func<bool> danger, Action action, Func<AdminUIIcon> icon = null)
     {
         this.label = label;
         this.tooltip = tooltip;
         this.enabled = enabled;
         this.danger = danger;
         this.action = action;
+        this.icon = icon;
         SetPadding(0f);
     }
 
@@ -183,15 +186,31 @@ internal sealed class ArenaGameCommandButton : UIPanel
         string text = label?.Invoke() ?? "";
         float scale = .84f;
         Vector2 size = FontAssets.MouseText.Value.MeasureString(text) * scale;
-        if (size.X > panel.Width - 14f)
+        bool hasIcon = icon is not null;
+        const float iconSize = 22f;
+        const float iconGap = 6f;
+        float iconSpace = hasIcon ? iconSize + iconGap : 0f;
+        float textWidth = Math.Max(1f, panel.Width - 14f - iconSpace);
+        if (size.X > textWidth)
         {
-            scale *= (panel.Width - 14f) / size.X;
+            scale *= textWidth / size.X;
             size = FontAssets.MouseText.Value.MeasureString(text) * scale;
         }
 
+        float contentWidth = size.X + iconSpace;
+        float x = panel.Center.X - contentWidth * .5f;
+        Color contentColor = active ? Color.White : Color.Gray;
+        if (hasIcon)
+        {
+            VanillaAdminIcons.DrawFitted(spriteBatch, icon(),
+                new Rectangle((int)x, panel.Center.Y - (int)(iconSize * .5f), (int)iconSize, (int)iconSize),
+                contentColor, allowUpscale: true);
+            x += iconSpace;
+        }
+
         Utils.DrawBorderString(spriteBatch, text,
-            new Vector2(panel.Center.X, panel.Center.Y - size.Y / 2f + 3f),
-            active ? Color.White : Color.Gray, scale, .5f);
+            new Vector2(x, panel.Center.Y - size.Y / 2f + 3f),
+            contentColor, scale);
     }
 
     private bool Enabled => enabled?.Invoke() ?? true;
