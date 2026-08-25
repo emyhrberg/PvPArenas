@@ -193,7 +193,9 @@ internal static class MatchReporter
             player.Winner,
             stats,
             itemStats,
-            [], // Arenas has no gem-capture mechanic.
+            // Gem captures are ctg-only, and Tavernkeep rejects the whole match when a payload
+            // carries a field owned by another game mode — an empty array counts as provided.
+            null,
             bossDamage);
     }
 
@@ -223,7 +225,9 @@ internal static class MatchReporter
             bool won = team == winningTeam;
             // The round's boss counts as killed only for the team that brought it down.
             List<short> bosses = won && boss > 0 ? [boss] : [];
-            result[(int)team] = new MatchTeamPayload(won ? 1 : 0, bosses, Clamp(teamBossDamage));
+            // Points are pvpa-only and gem captures are ctg-only; Tavernkeep rejects the match if
+            // either one is present. The winning team is already carried by MatchPlayerPayload.Winner.
+            result[(int)team] = new MatchTeamPayload(Bosses: bosses, BossDamage: Clamp(teamBossDamage));
         }
 
         return result;
@@ -334,6 +338,24 @@ internal static class MatchReporter
                           $"Team={player.Team}, Kills={player.Kills}, Deaths={player.Deaths}");
                 return false;
             }
+
+            if (player.GemCaptures != null)
+            {
+                Log.Error($"[Arenas match] Refusing to post malformed player: gem captures are ctg-only. " +
+                          $"SteamId={steamId}");
+                return false;
+            }
+        }
+
+        foreach (MatchTeamPayload? team in payload.Teams)
+        {
+            if (team is MatchTeamPayload teamPayload &&
+                (teamPayload.Points != null || teamPayload.GemCaptures != null))
+            {
+                Log.Error("[Arenas match] Refusing to post malformed team: points are pvpa-only and gem " +
+                          "captures are ctg-only.");
+                return false;
+            }
         }
 
         return true;
@@ -348,7 +370,7 @@ internal static class MatchReporter
 
         for (int i = 0; i < payload.Teams.Count; i++)
             if (payload.Teams[i] is MatchTeamPayload team)
-                Log.Info($"[Arenas match] Team {i}: {team.Points} points, {team.Bosses.Count} bosses, " +
+                Log.Info($"[Arenas match] Team {i}: {team.Bosses.Count} bosses, " +
                          $"{team.BossDamage} boss damage.");
     }
 
